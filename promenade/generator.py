@@ -87,6 +87,8 @@ class Generator:
             etcd_client_ca_key,
             etcd_peer_ca,
             etcd_peer_ca_key,
+            masters,
+            network,
             sa_pub,
             sa_priv,
         ]
@@ -249,13 +251,21 @@ def _master_config(hostname, host_data, masters, network, keys):
         'kubernetes.default.svc.cluster.local',
         '127.0.0.1',
     ]
+    calico_domains = [
+        'calico-etcd',
+        'calico-etcd.kube-system',
+        'calico-etcd.kube-system.svc',
+        'calico-etcd.kube-system.svc.cluster.local',
+        network['etcd_service_ip'],
+    ]
+
     docs = []
 
     docs.extend(keys.generate_certificate(
         alias='etcd-client',
         name='etcd:client:%s' % hostname,
         ca_name='etcd-client',
-        hosts=kube_domains + [hostname, host_data['ip']],
+        hosts=kube_domains + calico_domains + [hostname, host_data['ip']],
         target=hostname,
     ))
     docs.extend(keys.generate_certificate(
@@ -265,6 +275,7 @@ def _master_config(hostname, host_data, masters, network, keys):
         hosts=[hostname, host_data['ip']],
         target=hostname,
     ))
+
     docs.extend(keys.generate_certificate(
         alias='etcd-peer',
         name='etcd:peer:%s' % hostname,
@@ -329,6 +340,13 @@ def _genesis_config(hostname, host_data, masters, network, keys):
             hosts=[hostname, host_data['ip']],
             target=hostname,
         ))
+
+    docs.extend(keys.generate_certificate(
+        alias='etcd-calico-client',
+        name='etcd:client:calico',
+        ca_name='etcd-client',
+        target=hostname,
+    ))
 
     return docs
 
